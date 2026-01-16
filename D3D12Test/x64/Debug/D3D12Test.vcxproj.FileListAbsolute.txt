@@ -1,0 +1,4 @@
+F:\VC2022\repos\D3D12\D3D12Test\x64\Debug\D3D12\D3D12Core.dll
+F:\VC2022\repos\D3D12\D3D12Test\x64\Debug\D3D12\D3D12Core.pdb
+F:\VC2022\repos\D3D12\D3D12Test\x64\Debug\D3D12\D3D12SDKLayers.dll
+F:\VC2022\repos\D3D12\D3D12Test\x64\Debug\D3D12\D3D12SDKLayers.pdb
