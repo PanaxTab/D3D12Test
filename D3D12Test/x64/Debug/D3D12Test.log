@@ -1,2 +1,3 @@
 ﻿  main.cpp
-F:\VC2022\repos\D3D12\D3D12Test\D3D12Test\main.cpp(166,1): error C4716: 'getAdapter': must return a value
+F:\VC2022\repos\D3D12\D3D12Test\D3D12Test\main.cpp(125,1): warning C4715: 'WndProc': not all control paths return a value
+  D3D12Test.vcxproj -> F:\VC2022\repos\D3D12\D3D12Test\x64\Debug\D3D12Test.exe
