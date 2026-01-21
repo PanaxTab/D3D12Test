@@ -49,7 +49,7 @@ RECT winRect;
 ComPtr<ID3D12Device2> device;
 ComPtr<ID3D12CommandQueue>commandQueue;
 ComPtr<IDXGISwapChain4> swapChain;
-ComPtr<ID3D12Resource> backBuffers[numFrames];
+ComPtr<ID3D12Resource> backBufferS[numFrames];
 ComPtr<ID3D12GraphicsCommandList> commandList;
 ComPtr<ID3D12CommandAllocator> commandAllocator[numFrames];
 ComPtr<ID3D12DescriptorHeap> descriptorHeap;
@@ -370,6 +370,82 @@ ComPtr<IDXGISwapChain4> createSwapChain(HWND hWnd, ComPtr<ID3D12CommandQueue> co
 	ThrowIfFailed(swapChain1.As(&dxgiSwapChain4));
 
 	return dxgiSwapChain4;
+}
+
+ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(ComPtr<ID3D12Device2> device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors)
+{
+	ComPtr<ID3D12DescriptorHeap> descriptorHeap;
+	D3D12_DESCRIPTOR_HEAP_DESC desc = {};
+	desc.NumDescriptors = numDescriptors;
+	desc.Type = type;
+	ThrowIfFailed(device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&descriptorHeap)));
+
+	return descriptorHeap;
+}
+
+void updateRenderTarget(ComPtr<ID3D12Device2> device, ComPtr<IDXGISwapChain4> swapChain, ComPtr<ID3D12DescriptorHeap> descriptorHeap)
+{
+	auto rtvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	CD3DX12_CPU_DESCRIPTOR_HANDLE	rtvHandle(descriptorHeap->GetCPUDescriptorHandleForHeapStart());
+	for (int i = 0; i < numFrames; ++i)
+	{
+		ComPtr<ID3D12Resource> backBuffer;
+		ThrowIfFailed(swapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
+		device->CreateRenderTargetView(backBuffer.Get(), nullptr, rtvHandle);
+		backBufferS[i] = backBuffer;
+		rtvHandle.Offset(rtvDescriptorSize);
+	}
+}
+
+ComPtr<ID3D12CommandAllocator> CreateCommandAllocator(ComPtr<ID3D12Device2> device,D3D12_COMMAND_LIST_TYPE type)
+{
+	ComPtr<ID3D12CommandAllocator> commandAllocator;
+	ThrowIfFailed(device->CreateCommandAllocator(type, IID_PPV_ARGS(&commandAllocator)));
+
+	return commandAllocator;
+}
+
+ComPtr<ID3D12GraphicsCommandList> CreateCommandList(ComPtr<ID3D12Device2> device, ComPtr<ID3D12CommandAllocator> commandAllocator,D3D12_COMMAND_LIST_TYPE type)
+{
+	ComPtr<ID3D12GraphicsCommandList> commandList;
+	ThrowIfFailed(device->CreateCommandList(0,type,commandAllocator.Get(),nullptr, IID_PPV_ARGS(&commandList)));
+	ThrowIfFailed(commandList->Close());
+	return commandList;
+}
+
+ComPtr<ID3D12Fence> CreateFence(ComPtr<ID3D12Device2> device, D3D12_COMMAND_LIST_TYPE type)
+{
+	ComPtr<ID3D12Fence> fence;
+	ThrowIfFailed(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence)));
+	return fence;
+}
+
+HANDLE CreateEventHandle()
+{
+	HANDLE fenceEvent;
+
+	fenceEvent = ::CreateEvent(NULL, FALSE, FALSE, NULL);
+	assert(fenceEvent && "Failed to create fence event");
+	
+	return fenceEvent;
+}
+
+uint64_t Signal(ComPtr<ID3D12CommandQueue> commandQueue, ComPtr<ID3D12Fence> fence, uint64_t& fenceValue)
+{
+	uint64_t signalFenceValue = ++fenceValue;
+	ThrowIfFailed(commandQueue->Signal(fence.Get(), signalFenceValue));
+	
+	return signalFenceValue;
+}
+
+void WaitFenceValue(ComPtr<ID3D12Fence> fence, uint64_t fenceValue, HANDLE fenceEvent, std::chrono::milliseconds duration = (std::chrono::milliseconds::max)())
+{
+	if (fence->GetCompletedValue() < fenceValue)
+	{
+		ThrowIfFailed(fence->SetEventOnCompletion(fenceValue, fenceEvent));
+		::WaitForSingleObject(fenceEvent, static_cast<DWORD>(duration.count()));
+
+	}
 }
 
 int main()
